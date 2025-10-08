@@ -1,0 +1,270 @@
+# Builds, tests, packages and publishes a dotnet based solution.
+name: .NET CI
+
+on:
+  workflow_call:
+    inputs:
+      solution:
+        type: string
+        default: '*.sln'
+        description: 'Optional solution to process, use this if you have multiple solutions.'
+      build-configuration:
+        type: string
+        default: 'Release'
+        description: 'Configuration name to build.'
+      build-platform:
+        type: string
+        default: 'Any CPU'
+        description: 'Platform name to build.'
+      dotnet-sdk-version:
+        type: string
+        default: ''
+        description: 'Specific .NET SDK version to use.'
+      post-build-dotnet-args:
+        type: string
+        default: '--no-restore --no-build'
+        description: 'Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish.'
+      test-projects-glob:
+        type: string
+        default: '**/*[Tt]ests/*.csproj'
+        description: 'Glob to match test projects.'
+      test-arguments:
+        type: string
+        default: ''
+        description: 'Optional arguments to pass to test runner.'
+      test-coverage-arguments:
+        type: string
+        default: '--collect "Code Coverage"'
+        description: 'Test coverage arguments for collection.'
+      no-tests:
+        type: boolean
+        default: false
+        description: 'Whether not to run tests.'
+      with-platina-test-init:
+        type: boolean
+        default: false
+        description: 'Whether to run Platina test initialization.'
+      with-pack:
+        type: boolean
+        default: false
+        description: 'Whether to run dotnet package.'
+      with-publish:
+        type: boolean
+        default: false
+        description: 'Whether to run dotnet publish and publish to pipeline artifacts.'
+      with-release:
+        type: boolean
+        default: false
+        description: 'Whether to push created NuGets to external feed and/or add publish output to pipeline artifacts.'
+      nuget-config-path:
+        type: string
+        default: 'nuget.config'
+        description: 'Typically located at solution level, override for custom location.'
+      internal-feed-name:
+        type: string
+        default: ''
+        description: 'Name of internal NuGet feed to publish to.'
+      external-feed-credentials:
+        type: string
+        default: ''
+        description: 'Names of external NuGet feed links.'
+      with-nuget-cache:
+        type: boolean
+        default: false
+        description: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
+      azure-subscription:
+        type: string
+        default: ''
+        description: 'Optional Azure Subscription to run dotnet test under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials.'
+      container-registry-connection:
+        type: string
+        default: ''
+        description: 'Optional container registry connection for authentication.'
+      container-registry:
+        type: string
+        default: ''
+        description: 'Optional container registry login server to push containers to.'
+    secrets:
+      NUGET_API_KEY:
+        description: 'API key for external NuGet feed'
+        required: false
+      AZURE_CREDENTIALS:
+        description: 'Azure service principal credentials for CLI authentication'
+        required: false
+      CONTAINER_REGISTRY_USERNAME:
+        description: 'Container registry username'
+        required: false
+      CONTAINER_REGISTRY_PASSWORD:
+        description: 'Container registry password'
+        required: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK (specific version)
+      if: inputs.dotnet-sdk-version != ''
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-sdk-version }}
+        include-prerelease: true
+
+    - name: Setup .NET SDK (latest)
+      if: inputs.dotnet-sdk-version == ''
+      uses: actions/setup-dotnet@v4
+
+    - name: Generate NuGet cache key
+      if: inputs.with-nuget-cache == true
+      shell: pwsh
+      run: |
+        $cacheKey = Get-Date -Format "yyyyMMdd"
+        echo "NUGET_CACHE_KEY=$cacheKey" >> $env:GITHUB_ENV
+
+    - name: Cache NuGet packages
+      if: inputs.with-nuget-cache == true && env.NUGET_PACKAGES != ''
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: nuget-${{ runner.os }}-${{ env.NUGET_CACHE_KEY }}
+        restore-keys: |
+          nuget-${{ runner.os }}-
+
+    - name: Restore dependencies
+      run: |
+        if [ -n "${{ inputs.nuget-config-path }}" ] && [ -f "${{ inputs.nuget-config-path }}" ]; then
+          dotnet restore ${{ inputs.solution }} --configfile ${{ inputs.nuget-config-path }} --locked-mode
+        else
+          dotnet restore ${{ inputs.solution }}
+        fi
+
+    - name: Platina Begin Test Initialization
+      if: inputs.no-tests == false && inputs.with-platina-test-init == true
+      shell: pwsh
+      run: |
+        Get-ChildItem -Filter ${{ inputs.solution }} | Foreach-Object {
+          dotnet msbuild /target:BeginPlatinaTestInit "$($_.FullName)"
+        }
+        # Ignore msbuild errors because targets might not be present in projects.
+        exit 0;
+
+    - name: Restore .NET tools
+      run: dotnet tool restore
+
+    - name: Build solution
+      run: dotnet build ${{ inputs.solution }} --configuration ${{ inputs.build-configuration }} --property:Platform="${{ inputs.build-platform }}" --no-restore
+
+    - name: Pack solution
+      if: inputs.with-pack == true
+      run: dotnet pack ${{ inputs.solution }} --configuration ${{ inputs.build-configuration }} ${{ inputs.post-build-dotnet-args }} --property:PackageOutputPath=${{ github.workspace }}/nugets
+
+    - name: Publish solution
+      if: inputs.with-publish == true
+      run: dotnet publish ${{ inputs.solution }} --configuration ${{ inputs.build-configuration }} ${{ inputs.post-build-dotnet-args }} --property:PublishDir=${{ github.workspace }}/packages
+
+    - name: Platina End Test Initialization
+      if: inputs.no-tests == false && inputs.with-platina-test-init == true
+      shell: pwsh
+      run: |
+        Get-ChildItem -Filter ${{ inputs.solution }} | Foreach-Object {
+          dotnet msbuild /target:EndPlatinaTestInit "$($_.FullName)"
+        }
+        # Ignore msbuild errors because targets might not be present in projects.
+        exit 0;
+
+    - name: Run tests (standard)
+      if: inputs.no-tests == false && inputs.azure-subscription == ''
+      run: dotnet test ${{ inputs.test-projects-glob }} --configuration ${{ inputs.build-configuration }} ${{ inputs.post-build-dotnet-args }} ${{ inputs.test-coverage-arguments }} ${{ inputs.test-arguments }} --logger trx --results-directory ${{ runner.temp }}
+
+    - name: Azure CLI Login
+      if: inputs.no-tests == false && inputs.azure-subscription != ''
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Run tests (Azure CLI context)
+      if: inputs.no-tests == false && inputs.azure-subscription != ''
+      shell: pwsh
+      run: |
+        Get-ChildItem -Filter ${{ inputs.solution }} | Foreach-Object {
+          &dotnet test "$($_.FullName)" --logger trx --results-directory ${{ runner.temp }} --configuration ${{ inputs.build-configuration }} ${{ inputs.test-coverage-arguments }} ${{ inputs.post-build-dotnet-args }} ${{ inputs.test-arguments }}
+        }
+
+    - name: Publish test results
+      if: inputs.no-tests == false && always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: .NET Tests
+        path: ${{ runner.temp }}/*.trx
+        reporter: dotnet-trx
+        fail-on-error: true
+
+    - name: Publish code coverage
+      if: inputs.no-tests == false && always()
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ${{ runner.temp }}
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Push NuGet packages to external feed
+      if: inputs.with-pack == true && inputs.with-release == true && inputs.internal-feed-name == ''
+      run: |
+        find ${{ github.workspace }}/nugets -name "*.nupkg" -not -name "*.symbols.nupkg" -exec dotnet nuget push {} --source ${{ inputs.external-feed-credentials }} --api-key ${{ secrets.NUGET_API_KEY }} \;
+        find ${{ github.workspace }}/nugets -name "*.snupkg" -exec dotnet nuget push {} --source ${{ inputs.external-feed-credentials }} --api-key ${{ secrets.NUGET_API_KEY }} \;
+
+    - name: Push NuGet packages to internal feed
+      if: inputs.with-pack == true && inputs.with-release == true && inputs.internal-feed-name != ''
+      run: |
+        find ${{ github.workspace }}/nugets -name "*.nupkg" -not -name "*.symbols.nupkg" -exec dotnet nuget push {} --source ${{ inputs.internal-feed-name }} --api-key ${{ secrets.NUGET_API_KEY }} \;
+        find ${{ github.workspace }}/nugets -name "*.snupkg" -exec dotnet nuget push {} --source ${{ inputs.internal-feed-name }} --api-key ${{ secrets.NUGET_API_KEY }} \;
+
+    - name: Docker login
+      if: inputs.with-publish == true && inputs.with-release == true && inputs.container-registry-connection != '' && inputs.container-registry != ''
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.container-registry }}
+        username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+        password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+
+    - name: Docker push containers
+      if: inputs.with-publish == true && inputs.with-release == true && inputs.container-registry-connection != '' && inputs.container-registry != ''
+      shell: pwsh
+      run: |
+        $registry = "${{ inputs.container-registry }}"
+        Write-Host "Using registry $registry"
+        
+        Get-ChildItem "${{ github.workspace }}/packages" -Recurse -Filter container.json |
+          Foreach-Object {
+            $container = Get-Content $_.FullName | ConvertFrom-Json
+            $tag = "$registry/$($container.repository):$($container.version)"
+            
+            Write-Host "Pushing $tag"
+            &docker tag "$($container.repository):$($container.version)" "$tag"
+            &docker push "$tag"
+            
+            # Add registry to container.json
+            $container | Add-Member -MemberType NoteProperty -Name registry -Value $registry -Force
+            $container | ConvertTo-Json | Out-File -FilePath $_.FullName -Force
+          }
+
+    - name: Upload NuGet packages as artifacts
+      if: inputs.with-pack == true && inputs.with-release == true
+      uses: actions/upload-artifact@v4
+      with:
+        name: nugets
+        path: ${{ github.workspace }}/nugets/
+
+    - name: Upload published packages as artifacts
+      if: inputs.with-publish == true && inputs.with-release == true
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: ${{ github.workspace }}/packages/
