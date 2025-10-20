@@ -35,7 +35,7 @@ runs:
         echo "noTests=true" >> $GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
-      id: "convention-branch"
+      id: "convention"
       if: (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/')
       shell: bash
       run: |
