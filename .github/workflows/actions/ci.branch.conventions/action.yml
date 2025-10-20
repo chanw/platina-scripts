@@ -11,23 +11,11 @@ inputs:
     required: false
     default: "none"
 
-outputs:
-  withRelease:
-    description: "Indicates if there should be a release"
-    value: ${{ steps.convention.outputs.withRelease }}
-  prerelease:
-    description: "The pre-release version to use"
-    value: ${{ steps.convention.outputs.prerelease }}
-  noTests:
-    description: "Skip tests."
-    value: ${{ steps.convention.outputs.noTests }}
-
 runs:
   using: "composite"
   steps:
     - name: Detected prerelease build due to parameter.
-      id: "convention"
-      if: (inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none')
+      if: ${{ inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none' }}
       shell: bash
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
@@ -35,8 +23,7 @@ runs:
         echo "noTests=true" >> $GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
-      id: "convention"
-      if: (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/')
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/') }}
       shell: bash
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
