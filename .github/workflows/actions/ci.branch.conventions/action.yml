@@ -24,6 +24,7 @@ outputs:
 
 jobs:
   set-conventions:
+    runs-on: ubuntu-latest
     steps:
       - name: Detected prerelease build due to parameter.
         id: "convention"
