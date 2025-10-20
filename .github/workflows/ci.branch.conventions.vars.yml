@@ -1,0 +1,27 @@
+name: Configure CI flags based on branches.
+
+inputs:
+  noTests:
+    description: 'Skip tests.'
+    required: false
+    default: 'false'
+  prerelease:
+    description: 'Pre-release to trigger preparing packages.'
+    required: false
+    default: 'none'
+
+outputs:
+  if: ${{ (inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none') }}
+  withRelease:
+    value: true
+  prerelease:
+    value: ${{ inputs.prerelease }}
+  noTests:
+    value: ${{ inputs.noTests }}
+  if: ${{ (input.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/') }}
+  withRelease:
+    value: true
+  prerelease:
+    value: ${{ github.ref_name }}
+  noTests:
+    value: true
