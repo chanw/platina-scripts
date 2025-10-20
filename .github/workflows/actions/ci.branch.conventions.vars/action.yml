@@ -11,17 +11,30 @@ inputs:
     default: 'none'
 
 outputs:
-  if: ${{ (inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none') }}
   withRelease:
-    value: true
+    description: 'Indicates if there should be a release'
+    value: ${{ steps.convention.outputs.withRelease }}
   prerelease:
-    value: ${{ inputs.prerelease }}
+    description: 'The pre-release version to use'
+    value: ${{ steps.convention.outputs.prerelease }}
   noTests:
-    value: ${{ inputs.noTests }}
-  if: ${{ (input.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/') }}
-  withRelease:
-    value: true
-  prerelease:
-    value: ${{ github.ref_name }}
-  noTests:
-    value: true
+    description: 'Skip tests.'
+    value: ${{ steps.convention.outputs.noTests }}
+
+jobs:
+  steps:
+    - name: Detected prerelease build due to parameter.
+      if: ${{ (inputs.prerelease != null && inputs.prerelease != '' inputs.prerelease != 'none')}}
+      id: 'convention'
+      run: |
+        echo "withRelease=true" >> $GITHUB_OUTPUT
+        echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
+        echo "noTests=true" >> $GITHUB_OUTPUT
+
+    - name: Detected prerelease build for prerelease branch.
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/') }}
+      id: 'convention'
+      run: |
+        echo "withRelease=true" >> $GITHUB_OUTPUT
+        echo "prerelease=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        echo "noTests=true" >> $GITHUB_OUTPUT
