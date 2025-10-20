@@ -46,7 +46,7 @@ runs:
     
     - name: Detected release build for main, master or release branch.
       id: branch-prerelease
-      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref_name == 'refs/heads/main' || github.ref_name == 'refs/heads/master/' || startsWith(github.ref, 'refs/heads/releases/'))) }}
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref_name == 'refs/heads/main' || github.ref_name == 'refs/heads/master/' || startsWith(github.ref, 'refs/heads/releases/')) }}
       shell: bash
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
