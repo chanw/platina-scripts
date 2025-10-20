@@ -24,7 +24,7 @@ outputs:
 jobs:
   steps:
     - name: Detected prerelease build due to parameter.
-      if: ${{ (inputs.prerelease != null && inputs.prerelease != '' inputs.prerelease != 'none')}}
+      if: (inputs.prerelease != null && inputs.prerelease != '' inputs.prerelease != 'none')
       id: 'convention'
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
@@ -32,7 +32,7 @@ jobs:
         echo "noTests=true" >> $GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
-      if: ${{ (inputs.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/') }}
+      if: (inputs.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/')
       id: 'convention'
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
