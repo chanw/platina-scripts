@@ -1,39 +1,43 @@
 name: Configure CI flags based on branches.
+description: "Configure CI flags based on branches."
 
 inputs:
   noTests:
-    description: 'Skip tests.'
+    description: "Skip tests."
     required: false
-    default: 'false'
+    default: "false"
   prerelease:
-    description: 'Pre-release to trigger preparing packages.'
+    description: "Pre-release to trigger preparing packages."
     required: false
-    default: 'none'
+    default: "none"
 
 outputs:
   withRelease:
-    description: 'Indicates if there should be a release'
+    description: "Indicates if there should be a release"
     value: ${{ steps.convention.outputs.withRelease }}
   prerelease:
-    description: 'The pre-release version to use'
+    description: "The pre-release version to use"
     value: ${{ steps.convention.outputs.prerelease }}
   noTests:
-    description: 'Skip tests.'
+    description: "Skip tests."
     value: ${{ steps.convention.outputs.noTests }}
 
-jobs:
+runs:
+  using: "composite"
   steps:
     - name: Detected prerelease build due to parameter.
+      id: "convention"
+      shell: bash
       if: (inputs.prerelease != null && inputs.prerelease != '' inputs.prerelease != 'none')
-      id: 'convention'
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
         echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
         echo "noTests=true" >> $GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
+      id: "convention"
+      shell: bash
       if: (inputs.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/')
-      id: 'convention'
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
         echo "prerelease=${{ github.ref_name }}" >> $GITHUB_OUTPUT
