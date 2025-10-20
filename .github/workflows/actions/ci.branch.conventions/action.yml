@@ -14,13 +14,13 @@ inputs:
 outputs:
   noTests:
     description: "Skip tests."
-    value: ${{ steps.*.outputs.noTests }}
+    value: ${{ contains(steps.*.outputs.noTests, true) }}
   prerelease:
     description: "Pre-release to trigger preparing packages."
-    value: ${{ steps.*.outputs.prerelease }}
+    value: ${{ join(steps.*.outputs.prerelease) }}
   withRelease:
     description: "Whether to perform a release."
-    value: ${{ steps.*.outputs.withRelease }}
+    value: ${{ contains(steps.*.outputs.withRelease, true) }}
 
 runs:
   using: "composite"
@@ -41,4 +41,22 @@ runs:
       run: |
         echo "withRelease=true" >> $GITHUB_OUTPUT
         echo "prerelease=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        # Don't test to improve build times when prereleasing, tests should have succeeded during PR.
         echo "noTests=true" >> $GITHUB_OUTPUT
+    
+    - name: Detected release build for main, master or release branch.
+      id: branch-prerelease
+      if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && (github.ref_name == 'refs/heads/main' || github.ref_name == 'refs/heads/master/' || startsWith(github.ref, 'refs/heads/releases/'))) }}
+      shell: bash
+      run: |
+        echo "withRelease=true" >> $GITHUB_OUTPUT
+        # Don't test to improve build times when releasing, tests should have succeeded during PR.
+        echo "noTests=true" >> $GITHUB_OUTPUT
+
+    - name: No release detected.
+      id: no-release
+      if: ${{ inputs.prerelease == 'none' && github.ref_name != 'refs/heads/main' && github.ref_name != 'refs/heads/master' && startsWith(github.ref, 'refs/heads/releases/') != true && startsWith(github.ref, 'refs/heads/prereleases/') != true }}
+      shell: bash
+      run: |
+        echo "withRelease=false" >> $GITHUB_OUTPUT
+        echo "noTests=${{ inputs.noTests }}" >> $GITHUB_OUTPUT
