@@ -14,13 +14,13 @@ inputs:
 outputs:
   noTests:
     description: "Skip tests."
-    value: ${{ contains(steps.*.outputs.noTests, true) }}
+    value: ${{ contains(steps.*.outputs.noTests, 'true') }}
   prerelease:
     description: "Pre-release to trigger preparing packages."
     value: ${{ join(steps.*.outputs.prerelease) }}
   withRelease:
     description: "Whether to perform a release."
-    value: ${{ contains(steps.*.outputs.withRelease, true) }}
+    value: ${{ contains(steps.*.outputs.withRelease, 'true') }}
 
 runs:
   using: "composite"
