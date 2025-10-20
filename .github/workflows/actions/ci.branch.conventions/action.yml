@@ -14,18 +14,19 @@ inputs:
 outputs:
   noTests:
     description: "Skip tests."
-    value: "test"
+    value: ${{ steps.param-prerelease.outputs.noTests || steps.branch-prerelease.outputs.noTests || inputs.noTests }}
   prerelease:
     description: "Pre-release to trigger preparing packages."
-    value: "default prerelease"
+    value: ${{ steps.param-prerelease.outputs.prerelease || steps.branch-prerelease.outputs.prerelease || 'none' }}
   withRelease:
     description: "Whether to perform a release."
-    value: "withrelease flag"
+    value: ${{ steps.param-prerelease.outputs.withRelease || steps.branch-prerelease.outputs.withRelease || 'false' }}
 
 runs:
   using: "composite"
   steps:
     - name: Detected prerelease build due to parameter.
+      id: param-prerelease
       if: ${{ inputs.prerelease != null && inputs.prerelease != '' && inputs.prerelease != 'none' }}
       shell: bash
       run: |
@@ -34,6 +35,7 @@ runs:
         echo "noTests=true" >> $GITHUB_OUTPUT
 
     - name: Detected prerelease build for prerelease branch.
+      id: branch-prerelease
       if: ${{ (inputs.prerelease == null || inputs.prerelease == '' || inputs.prerelease == 'none') && startsWith(github.ref, 'refs/heads/prereleases/') }}
       shell: bash
       run: |
