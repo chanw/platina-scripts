@@ -31,7 +31,7 @@ jobs:
         if: (inputs.prerelease != null && inputs.prerelease != '' inputs.prerelease != 'none')
         run: |
           echo "withRelease=true" >> $GITHUB_OUTPUT
-          echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
+          echo "prerelease=$INPUTS_PRERELEASE" >> $GITHUB_OUTPUT
           echo "noTests=true" >> $GITHUB_OUTPUT
   
       - name: Detected prerelease build for prerelease branch.
@@ -39,5 +39,5 @@ jobs:
         if: (inputs.prerelease == null || inputs.prerelease == '') && startsWith(github.ref, 'refs/heads/prereleases/')
         run: |
           echo "withRelease=true" >> $GITHUB_OUTPUT
-          echo "prerelease=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "prerelease=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
           echo "noTests=true" >> $GITHUB_OUTPUT
