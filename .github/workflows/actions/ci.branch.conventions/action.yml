@@ -11,6 +11,17 @@ inputs:
     required: false
     default: "none"
 
+outputs:
+  noTests:
+    description: "Skip tests."
+    value: "test"
+  prerelease:
+    description: "Pre-release to trigger preparing packages."
+    value: "default prerelease"
+  withRelease:
+    description: "Whether to perform a release."
+    value: "withrelease flag"
+
 runs:
   using: "composite"
   steps:
