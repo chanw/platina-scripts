@@ -14,13 +14,13 @@ inputs:
 outputs:
   noTests:
     description: "Skip tests."
-    value: ${{ steps.param-prerelease.outputs.noTests || steps.branch-prerelease.outputs.noTests || inputs.noTests }}
+    value: ${{ steps.*.outputs.noTests }}
   prerelease:
     description: "Pre-release to trigger preparing packages."
-    value: ${{ steps.param-prerelease.outputs.prerelease || steps.branch-prerelease.outputs.prerelease || 'none' }}
+    value: ${{ steps.*.outputs.prerelease }}
   withRelease:
     description: "Whether to perform a release."
-    value: ${{ steps.param-prerelease.outputs.withRelease || steps.branch-prerelease.outputs.withRelease || 'false' }}
+    value: ${{ steps.*.outputs.withRelease }}
 
 runs:
   using: "composite"
