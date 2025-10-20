@@ -17,7 +17,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      - uses: ./.github/workflows/actions/ci.branch.conventions.vars.yml
+      - uses: ./.github/workflows/actions/ci.branch.conventions.vars
         with:
           prerelease: 'test-prerelease'
       
