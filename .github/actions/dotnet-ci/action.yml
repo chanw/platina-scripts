@@ -2,8 +2,17 @@ name: "DotNet CI"
 description: "Builds, tests, packages and publishes a dotnet based solution."
 
 inputs:
+  Solution: 
+    description: "Optional solution to process, use this if you have multiple solutions."
+    required: false
+    default: "*.sln"
+
   DotNetSdkVersion:
     description: "Specific .NET SDK version to use."
+    required: false
+    default: ""
+  WithNuGetCache:
+    description: "Whether to cache NuGet packages."
     required: false
     default: ""
 
@@ -11,7 +20,12 @@ runs:
   using: composite
   steps:
     - uses: actions/setup-dotnet@v5
-      name: Use specific .NET SDK version ${{ inputs.DotNetSdkVersion }}
       if: ${{ inputs.DotNetSdkVersion != '' }}
+      name: Use specific .NET SDK version ${{ inputs.DotNetSdkVersion }}
       with:
         dotnet-version: ${{ inputs.DotNetSdkVersion }}
+        cache: ${{ inputs.WithNuGetCache == 'true' }}
+
+    - name: DotNet Restore
+      shell: bash
+      run: dotnet restore ${{ inputs.Solution }}
