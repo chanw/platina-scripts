@@ -29,3 +29,17 @@ runs:
     - name: DotNet Restore
       shell: bash
       run: dotnet restore ${{ inputs.Solution }}
+
+# todo:
+# - dotnet tool restore
+# - dotnet build
+# - dotnet pack
+# - dotnet publish
+# - before tests steps?
+# - dotnet test
+# - publish test results
+# - after tests steps?
+# - dotnet push + dotnet push internal feed?
+# - dotnet push symbols?
+# - docker login + push to all containers
+# - publish pipeline artifacts (packages)
