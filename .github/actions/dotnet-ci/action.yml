@@ -2,7 +2,7 @@ name: "DotNet CI"
 description: "Builds, tests, packages and publishes a dotnet based solution."
 
 inputs:
-  Solution: 
+  Solution:
     description: "Optional solution to process, use this if you have multiple solutions."
     required: false
     default: "*.sln"
@@ -16,6 +16,34 @@ inputs:
     required: false
     default: ""
 
+  BuildConfiguration:
+    description: "Configuration name to build."
+    required: false
+    default: "Release"
+  BuildPlatform:
+    description: "Platform name to build."
+    required: false
+    default: "Any CPU"
+
+  PostBuildDotnetArgs:
+    description: "Arguments passed to dotnet commander post build dotnet tasks like test, pack and publish."
+    required: false
+    default: "--no-restore --no-build"
+
+  WithPack:
+    description: "Whether to run 'dotnet package'."
+    required: false
+    default: "false"
+  WithPublish:
+    description: "Whether to run 'dotnet publish' and publish to pipeline artifacts."
+    required: false
+    default: "false"
+  
+  NUGET_AUTH_TOKEN:
+    description: "NuGet authentication token for private feeds."
+    required: false
+    default: ""
+
 runs:
   using: composite
   steps:
@@ -25,21 +53,51 @@ runs:
       with:
         dotnet-version: ${{ inputs.DotNetSdkVersion }}
         cache: ${{ inputs.WithNuGetCache == 'true' }}
+      env:
+        # todo: use secrets?
+        NUGET_AUTH_TOKEN: ${{ inputs.NUGET_AUTH_TOKEN }} 
 
     - name: DotNet Restore
       shell: bash
       run: dotnet restore ${{ inputs.Solution }}
 
+    # DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
+    # https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
+    # todo: test if this works with only 'dotnet restore'
+    - name: DotNet Tool Restore
+      shell: bash
+      run: dotnet tool restore
+
+    - name: DotNet Build
+      shell: bash
+      run: dotnet build --configuration ${{ inputs.BuildConfiguration }} /p:Platform="${{ inputs.BuildPlatform}}" --no-restore"
+
+    # Better path for output?
+    - name: DotNet Pack
+      shell: bash
+      if: ${{ inputs.WithPack == 'true' }}
+      run: dotnet pack ${{ inputs.Solution }} --configuration ${{ inputs.BuildConfiguration }} ${{ inputs.PostBuildDotnetArgs }} --property:PackageOutputPath=${{ runner.temp }}/nugets
+
+    # "$(find . -name ${{ inputs.Solution }})"?
+    - name: DotNet Publish
+      shell: bash
+      if: ${{ inputs.WithPublish == 'true' }}
+      run: |
+        dotnet publish ${{ inputs.Solution }} --configuration ${{ inputs.BuildConfiguration }} ${{ inputs.PostBuildDotnetArgs }} --property PublishDir=${{ runner.temp }}/packages
+
+    - name: Add publish output to pipeline artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages
+        path: ${{ runner.temp }}/packages
+
 # todo:
-# - dotnet tool restore
-# - dotnet build
-# - dotnet pack
-# - dotnet publish
+
 # - before tests steps?
 # - dotnet test
 # - publish test results
 # - after tests steps?
+# - before release steps?
 # - dotnet push + dotnet push internal feed?
 # - dotnet push symbols?
 # - docker login + push to all containers
-# - publish pipeline artifacts (packages)

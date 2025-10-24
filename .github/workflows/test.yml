@@ -37,16 +37,3 @@ jobs:
           prerelease: ${{ inputs.prerelease }}
 
       - uses: ./.github/actions/dotnet-ci
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: | 
-          echo ${{ steps.conventions.outputs.withRelease }}
-          echo ${{ steps.conventions.outputs.prerelease }}
-          echo ${{ steps.conventions.outputs.noTests }}
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
