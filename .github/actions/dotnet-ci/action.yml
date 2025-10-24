@@ -43,6 +43,11 @@ inputs:
     description: "NuGet authentication token for private feeds."
     required: false
     default: ""
+  
+  NUGET_SOURCE_URL:
+    description: "NuGet source URL for private feeds."
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -53,9 +58,10 @@ runs:
       with:
         dotnet-version: ${{ inputs.DotNetSdkVersion }}
         cache: ${{ inputs.WithNuGetCache == 'true' }}
+        source-url: ${{ inputs.NUGET_SOURCE_URL }}
       env:
         # todo: use secrets?
-        NUGET_AUTH_TOKEN: ${{ inputs.NUGET_AUTH_TOKEN }} 
+        NUGET_AUTH_TOKEN: ${{ inputs.NUGET_AUTH_TOKEN }}
 
     - name: DotNet Restore
       shell: bash
