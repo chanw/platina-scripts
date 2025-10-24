@@ -76,7 +76,7 @@ runs:
 
     - name: DotNet Build
       shell: bash
-      run: dotnet build --configuration ${{ inputs.BuildConfiguration }} /p:Platform="${{ inputs.BuildPlatform}}" --no-restore"
+      run: dotnet build --configuration ${{ inputs.BuildConfiguration }} /p:Platform="${{ inputs.BuildPlatform}}" --no-restore
 
     # Better path for output?
     - name: DotNet Pack
