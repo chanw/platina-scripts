@@ -10,7 +10,7 @@ inputs:
   DotNetSdkVersion:
     description: "Specific .NET SDK version to use."
     required: false
-    default: ""
+    default: "8.0.x"
   WithNuGetCache:
     description: "Whether to cache NuGet packages."
     required: false
