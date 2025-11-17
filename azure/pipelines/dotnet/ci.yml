@@ -46,10 +46,6 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether not to run tests.'
-- name: WithPlatinaTestInit
-  type: boolean
-  default: false
-  displayName: 'Whether to run Platina test initialization.'
   
 - name: WithPack
   type: boolean
@@ -134,18 +130,6 @@ steps:
       externalFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
       restoreArguments: --locked-mode
 
-- ${{ if and( ne(parameters.NoTests, true), ne(parameters.WithPlatinaTestInit, false) ) }}:
-  - task: PowerShell@2
-    displayName: 'Platina Begin Test Initialization'
-    inputs:
-      targetType: 'inline'
-      script: |
-        Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-          dotnet msbuild /target:BeginPlatinaTestInit "$($_.FullName)"
-        }
-        # Ignore msbuild errors because targets might not be present in projects.
-        exit 0;
-
 # DotNet restore doesn't restore tools in ./config/dotnet-tools.json, although documentation seems to indicate otherwise.
 # https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools
 - task: DotNetCoreCLI@2
@@ -198,18 +182,7 @@ steps:
 
 - ${{ if ne(parameters.NoTests, 'true') }}:
   - ${{ each step in parameters.BeforeTestsSteps }}:
-    - ${{ step }} 
-  - ${{ if and( eq(parameters.NoTests, false), ne(parameters.WithPlatinaTestInit, false) ) }}:
-    - task: PowerShell@2
-      displayName: 'Platina End Test Initialization'
-      inputs:
-        targetType: 'inline'
-        script: |
-          Get-ChildItem -Filter ${{ parameters.Solution }} | Foreach-Object {
-            dotnet msbuild /target:EndPlatinaTestInit "$($_.FullName)"
-          }
-          # Ignore msbuild errors because targets might not be present in projects.
-          exit 0;
+    - ${{ step }}
 
   - ${{ if eq(parameters.AzureSubscription, '') }}:
     - task: DotNetCoreCLI@2
