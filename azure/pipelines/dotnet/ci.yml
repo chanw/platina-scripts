@@ -88,6 +88,14 @@ parameters:
   type: boolean
   default: false
   displayName: 'Whether to cache NuGet packages. NUGET_PACKAGES environment variable still needs to be set though.'
+- name: ExternalFeedUrl
+  type: string
+  default: ''
+  displayName: 'Optional URL of external NuGet feed. If this is set, AzureDevOpsConnection is required. Feed URL should be in the NuGet service index format: https://pkgs.dev.azure.com/{ORG_NAME}/{PROJECT}/_packaging/{FEED_NAME}/nuget/v3/index.json.'
+- name: AzureDevOpsConnection
+  type: string
+  default: ''
+  displayName: 'Optional Azure DevOps service connection for authenticating with external feeds.'
 
 - name: AzureSubscription
   type: string
@@ -125,6 +133,12 @@ steps:
         nuget | "$(Agent.OS)"
       path: $(NUGET_PACKAGES)
     condition: ne(variables.NUGET_PACKAGES, '')
+
+- task: NuGetAuthenticate@1
+  displayName: 'Authenticate with NuGet'
+  inputs:
+    feedUrl: ${{ parameters.ExternalFeedUrl }}
+    azureDevOpsServiceConnection: ${{ parameters.AzureDevOpsConnection }}
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
