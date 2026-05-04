@@ -134,11 +134,12 @@ steps:
       path: $(NUGET_PACKAGES)
     condition: ne(variables.NUGET_PACKAGES, '')
 
-- task: NuGetAuthenticate@1
-  displayName: 'Authenticate with NuGet'
-  inputs:
-    feedUrl: ${{ parameters.ExternalFeedUrl }}
-    azureDevOpsServiceConnection: ${{ parameters.AzureDevOpsConnection }}
+- ${{ if and( parameters.ExternalFeedUrl, parameters.AzureDevOpsConnection ) }}:
+  - task: NuGetAuthenticate@1
+    displayName: 'Authenticate with NuGet'
+    inputs:
+      feedUrl: ${{ parameters.ExternalFeedUrl }}
+      azureDevOpsServiceConnection: ${{ parameters.AzureDevOpsConnection }}
 
 - task: DotNetCoreCLI@2
   displayName: 'DotNet Restore'
