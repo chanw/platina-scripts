@@ -330,6 +330,9 @@ steps:
     - ${{ step }} 
   
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
+  # Push NuGets to external feed with 'dotnet nuget push' command instead.
+  # This is because the 'push' command of 'DotNetCoreCLI@2' doesn't support a full nuget NuGet Service Index URL format which is used with 'NuGetAuthenticate' task (see above).
+  # And the 'push' command will no longer take new features.
   - ${{ if parameters.ExternalFeedUrl }}:
     - task: PowerShell@2
       displayName: 'DotNet Push'

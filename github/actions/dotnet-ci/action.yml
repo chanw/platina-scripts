@@ -98,6 +98,7 @@ inputs:
 runs:
   using: composite
   steps:
+    # Login in Azure CLI context provided with a service principal.
     - uses: azure/login@v1
       if: ${{ inputs.azureClientId != '' && inputs.azureTenantId != '' }}
       name: Azure CLI Login
@@ -106,6 +107,9 @@ runs:
         tenant-id: ${{ inputs.azureTenantId }}
         allow-no-subscriptions: true
 
+    # Simplifies Azure DevOps Central Feed Service authentication. Fetches access token for Azure DevOps and sets this as an environment variale.
+    # Assuming the workflow is authenticated using OIDC (Azure CLI login step).
+    # Additionally it can also setup needed environment variables for nuget & npm authentication.
     - uses: microsoft/setup-cfs@main
       if: ${{ inputs.externalFeedUrl != '' }}
       name: Setup CFS
