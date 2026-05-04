@@ -337,8 +337,9 @@ steps:
         targetType: inline
         script: |
            foreach ($package in (Get-ChildItem -Path $(Build.ArtifactStagingDirectory)/nugets -Recurse -Include *.nupkg, *.snupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" })) {
-               dotnet nuget push $package.FullName --source "${{ parameters.ExternalFeedUrl }}" --api-key "${{ inputs.nuGetAuthToken }}"
+               dotnet nuget push $package.FullName --source "${{ parameters.ExternalFeedUrl }}"
            }
+
   - ${{ else }}:
     - ${{ if eq(parameters.InternalFeedName, '') }}:
       # Push NuGets to external feed.
