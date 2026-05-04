@@ -83,15 +83,15 @@ inputs:
     required: false
     default: ""
   externalFeedUrl:
-    description: "External feed URL for private feeds."
+    description: "External feed URL for private feeds. Feed URL should be in format https://pkgs.dev.azure.com/{ORG_NAME}/{PROJECT}/_packaging/{FEED_NAME}/"
     required: false
     default: ""
   azureClientId:
-    description: "Azure Client ID for authenticating with Azure for Azure Artifacts or to run 'dotnet test' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials."
+    description: "Azure Client ID for authenticating with Azure Artifacts."
     required: false
     default: "" 
   azureTenantId:
-    description: "Azure Tenant ID for authenticating with Azure for Azure Artifacts or to run 'dotnet test' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials."
+    description: "Azure Tenant ID for authenticating with Azure Artifacts."
     required: false
     default: ""
 
@@ -99,7 +99,7 @@ runs:
   using: composite
   steps:
     - uses: azure/login@v1
-      if: ${{ inputs.externalFeedUrl != '' }}
+      if: ${{ inputs.azureClientId != '' && inputs.azureTenantId != '' }}
       name: Azure CLI Login
       with:
         client-id: ${{ inputs.azureClientId }}
