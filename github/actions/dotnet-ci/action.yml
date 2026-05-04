@@ -82,10 +82,38 @@ inputs:
     description: "Personal Access Token for publishing symbols to Azure Artifacts symbol server."
     required: false
     default: ""
+  externalFeedUrl:
+    description: "External feed URL for private feeds."
+    required: false
+    default: ""
+  azureClientId:
+    description: "Azure Client ID for authenticating with Azure for Azure Artifacts or to run 'dotnet test' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials."
+    required: false
+    default: "" 
+  azureTenantId:
+    description: "Azure Tenant ID for authenticating with Azure for Azure Artifacts or to run 'dotnet test' under Azure CLI context. So you can access Azure resources (like App Configuration, Key Vault, etc) with authenticated credentials."
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
+    - uses: azure/login@v1
+      if: ${{ inputs.externalFeedUrl != '' }}
+      name: Azure CLI Login
+      with:
+        client-id: ${{ inputs.azureClientId }}
+        tenant-id: ${{ inputs.azureTenantId }}
+        allow-no-subscriptions: true
+
+    - uses: microsoft/setup-cfs@main
+      if: ${{ inputs.externalFeedUrl != '' }}
+      name: Setup CFS
+      with:
+        feed-url: ${{ inputs.externalFeedUrl }}
+        nuget: true
+        npm-config: true
+
     - uses: actions/setup-dotnet@v5
       if: ${{ inputs.dotNetSdkVersion != '' || (inputs.nuGetSourceUrl != '' && inputs.nuGetAuthToken != '') }}
       name: Setup DotNet NuGet Feed
@@ -116,6 +144,9 @@ runs:
     - name: DotNet Tool Restore
       shell: pwsh
       run: dotnet tool restore
+
+    - if: ${{ hashFiles('./.github/actions/ci-beforeBuildSteps/action.yml') != '' }}
+      uses: ./.github/actions/ci-beforeBuildSteps
 
     - name: DotNet Build
       shell: pwsh
