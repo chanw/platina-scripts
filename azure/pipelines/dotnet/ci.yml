@@ -330,25 +330,35 @@ steps:
     - ${{ step }} 
   
 - ${{ if and( eq(parameters.WithPack, 'true'), eq(parameters.WithRelease, 'true') ) }}:
-  - ${{ if eq(parameters.InternalFeedName, '') }}:
-    # Push NuGets to external feed.
-    - task: DotNetCoreCLI@2
+  - ${{ if parameters.ExternalFeedUrl }}:
+    - task: PowerShell@2
       displayName: 'DotNet Push'
       inputs:
-        command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
-        nuGetFeedType: 'external'
-        publishFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
-
-  - ${{ if ne(parameters.InternalFeedName, '') }}:
-    # Push NuGets to internal feed.
-    - task: DotNetCoreCLI@2
-      displayName: 'DotNet Push'
-      inputs:
-        command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
-        nuGetFeedType: 'internal'
-        publishVstsFeed: ${{ parameters.InternalFeedName }}
+        targetType: inline
+        script: |
+           foreach ($package in (Get-ChildItem -Path ${{ runner.temp }}/nugets -Recurse -Include *.nupkg, *.snupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" })) {
+               dotnet nuget push $package.FullName --source "${{ parameters.ExternalFeedUrl }}" --api-key "${{ inputs.nuGetAuthToken }}"
+           }
+  - ${{ else }}:
+    - ${{ if eq(parameters.InternalFeedName, '') }}:
+      # Push NuGets to external feed.
+      - task: DotNetCoreCLI@2
+        displayName: 'DotNet Push'
+        inputs:
+          command: 'push'
+          packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
+          nuGetFeedType: 'external'
+          publishFeedCredentials: ${{ parameters.ExternalFeedCredentials }}
+  
+    - ${{ if ne(parameters.InternalFeedName, '') }}:
+      # Push NuGets to internal feed.
+      - task: DotNetCoreCLI@2
+        displayName: 'DotNet Push'
+        inputs:
+          command: 'push'
+          packagesToPush: '$(Build.ArtifactStagingDirectory)/nugets/*.nupkg;$(Build.ArtifactStagingDirectory)/nugets/*.snupkg;!$(Build.ArtifactStagingDirectory)/nugets/*.symbols.nupkg'
+          nuGetFeedType: 'internal'
+          publishVstsFeed: ${{ parameters.InternalFeedName }}
 
   # The above task does publish the .snupkgs, but Visual Studio can't seem to consume them from the artifact feed yet?
   # Therefore, also publish the .pdb to the SymbolServer of this organization.
