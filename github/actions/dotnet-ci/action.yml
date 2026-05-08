@@ -82,10 +82,42 @@ inputs:
     description: "Personal Access Token for publishing symbols to Azure Artifacts symbol server."
     required: false
     default: ""
+  externalFeedUrl:
+    description: "External feed URL for private feeds. Feed URL should be in format https://pkgs.dev.azure.com/{ORG_NAME}/{PROJECT}/_packaging/{FEED_NAME}/"
+    required: false
+    default: ""
+  azureClientId:
+    description: "Azure Client ID for authenticating with Azure Artifacts."
+    required: false
+    default: "" 
+  azureTenantId:
+    description: "Azure Tenant ID for authenticating with Azure Artifacts."
+    required: false
+    default: ""
 
 runs:
   using: composite
   steps:
+    # Login in Azure CLI context provided with a service principal.
+    - uses: azure/login@v1
+      if: ${{ inputs.azureClientId != '' && inputs.azureTenantId != '' }}
+      name: Azure CLI Login
+      with:
+        client-id: ${{ inputs.azureClientId }}
+        tenant-id: ${{ inputs.azureTenantId }}
+        allow-no-subscriptions: true
+
+    # Simplifies Azure DevOps Central Feed Service authentication. Fetches access token for Azure DevOps and sets this as an environment variale.
+    # Assuming the workflow is authenticated using OIDC (Azure CLI login step).
+    # Additionally it can also setup needed environment variables for nuget & npm authentication.
+    - uses: microsoft/setup-cfs@main
+      if: ${{ inputs.externalFeedUrl != '' }}
+      name: Setup CFS
+      with:
+        feed-url: ${{ inputs.externalFeedUrl }}
+        nuget: true
+        npm-config: true
+
     - uses: actions/setup-dotnet@v5
       if: ${{ inputs.dotNetSdkVersion != '' || (inputs.nuGetSourceUrl != '' && inputs.nuGetAuthToken != '') }}
       name: Setup DotNet NuGet Feed
@@ -116,6 +148,9 @@ runs:
     - name: DotNet Tool Restore
       shell: pwsh
       run: dotnet tool restore
+
+    - if: ${{ hashFiles('./.github/actions/ci-beforeBuildSteps/action.yml') != '' }}
+      uses: ./.github/actions/ci-beforeBuildSteps
 
     - name: DotNet Build
       shell: pwsh
